@@ -2,6 +2,12 @@
 
 Hebrew, RTL social workspace for stand-up comedians. React + TypeScript + Vite, hosted on Vercel. Supabase supplies authentication, PostgreSQL and image storage.
 
+## Design: בלי פילטר
+
+The implemented visual direction is proposal 2: a bold independent comedy magazine. An oversized Hebrew masthead, warm paper texture, black editorial rules, acid-yellow labels and electric-blue actions replace the earlier card dashboard. Desktop uses staggered story columns, a writing rail and a creator index; phones show a readable single-column edition with a collapsible menu. Auth, composer and profile dialogs follow the same visual system and support Escape/focus containment.
+
+Heebo is bundled locally through `@fontsource-variable/heebo`; the UI no longer requests fonts from Google. `public/images/stage.png` is an AI-generated empty-stage illustration used in the masthead and explicitly labeled demo material. It is not a photograph of a real user's performance. Uploaded user images retain their colors and proportions.
+
 ## Current status
 
 The deployed site runs in **clearly labeled demonstration mode** until Supabase is configured. Demo content is fictional. Registration, publication, comments and reactions are intentionally disabled in demo mode. Bookmarks are saved locally in the current browser. No shared-user workflow has been validated against a live database yet.

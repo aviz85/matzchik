@@ -10,7 +10,6 @@ import {
   X,
   ArrowUpLeft,
   Bookmark,
-  Users,
   Sparkles,
   LogOut,
   Trash2,
@@ -18,6 +17,10 @@ import {
   Menu,
   Check,
   Loader2,
+  Crown,
+  ArrowLeft,
+  ArrowDownLeft,
+  Lightbulb,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -29,6 +32,7 @@ import {
   type Post,
   type Profile,
 } from "./lib";
+import "@fontsource-variable/heebo";
 import "./style.css";
 function App() {
   const [posts, setPosts] = useState<Post[]>(db ? [] : demo),
@@ -62,6 +66,46 @@ function App() {
     [error, setError] = useState(""),
     [comment, setComment] = useState<Record<string, string>>({}),
     [menu, setMenu] = useState(false);
+  useEffect(() => {
+    if (!modal) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) setModal(null);
+      if (event.key === "Tab") {
+        const elements = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            ".modal button:not(:disabled),.modal input,.modal textarea",
+          ),
+        ).filter((el) => el.getClientRects().length > 0);
+        const first = elements[0],
+          last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    const timer = setTimeout(
+      () =>
+        document
+          .querySelector<HTMLElement>(
+            ".modal input,.modal textarea,.modal button",
+          )
+          ?.focus(),
+      0,
+    );
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handler);
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handler);
+      previous?.focus();
+    };
+  }, [modal, saving]);
   const notify = (s: string) => {
     setToast(s);
     setTimeout(() => setToast(""), 4500);
@@ -197,14 +241,12 @@ function App() {
         image_url = path;
       }
       await checked(
-        db
-          .from("posts")
-          .insert({
-            user_id: user.id,
-            body: body.trim(),
-            kind,
-            image_path: image_url,
-          }),
+        db.from("posts").insert({
+          user_id: user.id,
+          body: body.trim(),
+          kind,
+          image_path: image_url,
+        }),
       );
       setModal(null);
       setBody("");
@@ -250,13 +292,11 @@ function App() {
     setSaving(true);
     try {
       await checked(
-        db
-          .from("comments")
-          .insert({
-            post_id: p.id,
-            user_id: user.id,
-            body: comment[p.id].trim(),
-          }),
+        db.from("comments").insert({
+          post_id: p.id,
+          user_id: user.id,
+          body: comment[p.id].trim(),
+        }),
       );
       setComment({ ...comment, [p.id]: "" });
       await load();
@@ -309,23 +349,76 @@ function App() {
   );
   return (
     <>
-      <header>
+      <a className="skip-link" href="#main-content">
+        דילוג לתוכן
+      </a>
+      <header className="site-header">
+        <button
+          className="mobile-menu icon"
+          onClick={() => setMenu(!menu)}
+          aria-label="תפריט"
+          aria-expanded={menu}
+          aria-controls="site-nav"
+        >
+          <Menu />
+        </button>
         <a
-          className="brand"
+          className="compact-brand"
           href="#"
-          onClick={() => {
+          aria-label="מצחיק — דף הבית"
+          onClick={(e) => {
+            e.preventDefault();
             setView("feed");
             setSelected(null);
+            setMenu(false);
           }}
         >
-          <span className="brand-icon">
-            <Mic size={23} />
-          </span>
-          מצחיק<span className="brand-dot">.</span>
+          מצחיק<span>®</span>
         </a>
-        <div className="header-note">החומר טוב יותר כשכותבים ביחד</div>
+        <nav
+          id="site-nav"
+          className={`site-nav ${menu ? "show" : ""}`}
+          aria-label="ניווט ראשי"
+        >
+          {[
+            ["feed", "הפיד"],
+            ["people", "הקומיקאים"],
+            ["saved", "שמרתי להמשך"],
+            ["mine", "החומרים שלי"],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              className={view === id ? "active" : ""}
+              aria-current={view === id ? "page" : undefined}
+              onClick={() => {
+                setView(id);
+                setSelected(null);
+                setMenu(false);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+          {user && (
+            <button className="signout" onClick={() => db?.auth.signOut()}>
+              <LogOut size={15} /> יציאה
+            </button>
+          )}
+        </nav>
+        <label className="search header-search">
+          <Search size={19} />
+          <input
+            placeholder="חיפוש פאנצ׳ים, רעיונות, יוצרים…"
+            aria-label="חיפוש בחומרים"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (view === "people") setView("feed");
+            }}
+          />
+          <span className="search-hint">חיפוש</span>
+        </label>
         <div className="header-actions">
-          <span className="beta">בטא</span>
           {user ? (
             <button
               className="avatar"
@@ -336,62 +429,61 @@ function App() {
             </button>
           ) : (
             <button className="outline" onClick={() => open("auth")}>
-              כניסה לקהילה <ArrowUpLeft size={16} />
+              כניסה לקהילה <ArrowUpLeft size={15} />
             </button>
           )}
-          <button
-            className="mobile-menu icon"
-            onClick={() => setMenu(!menu)}
-            aria-label="תפריט"
-          >
-            <Menu />
-          </button>
         </div>
       </header>
+      <section className="masthead" aria-label="מצחיק — קהילת הסטנדאפ">
+        <div className="masthead-art" aria-hidden="true">
+          <img src="/images/stage.png" alt="" />
+          <span className="art-caption">
+            יותר קולות.
+            <br />
+            פחות פילטרים.
+          </span>
+          <svg className="scribble" viewBox="0 0 120 65">
+            <path d="M8 42 27 12 31 48 60 8 62 50 88 20 108 44" />
+          </svg>
+        </div>
+        <a
+          className="masthead-word"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            setView("feed");
+            setSelected(null);
+          }}
+        >
+          מצחיק
+        </a>
+        <div className="masthead-manifesto">
+          <span className="tape-label">
+            קהילת הסטנדאפ
+            <br />
+            של ישראל
+          </span>
+          <p>
+            פאנצ׳ים
+            <br />
+            רעיונות
+            <br />
+            חומרים
+            <br />
+            <b>אנשים אמיתיים.</b>
+          </p>
+          <span className="issue-number">בלי פילטר / גרסת בטא</span>
+        </div>
+      </section>
+      <div className="editorial-kicker">
+        <span>חומר טוב לא נכתב לבד.</span>
+        <span>כותבים. משתפים. מחדדים. מפרגנים.</span>
+        <span className="kicker-arrow" aria-hidden="true">
+          <ArrowDownLeft size={23} />
+        </span>
+      </div>
       <div className="layout">
-        <aside className={`sidebar ${menu ? "show" : ""}`}>
-          <div className="sidebar-label">מאחורי הקלעים</div>
-          <nav>
-            {[
-              ["feed", "הפיד", Mic],
-              ["people", "הקומיקאים", Users],
-              ["saved", "שמרתי להמשך", Bookmark],
-              ["mine", "החומרים שלי", Sparkles],
-            ].map(([id, label, Icon]) => (
-              <button
-                key={id as string}
-                className={view === id ? "active" : ""}
-                onClick={() => {
-                  setView(id as string);
-                  setSelected(null);
-                  setMenu(false);
-                }}
-              >
-                {React.createElement(Icon as typeof Mic, { size: 20 })}
-                {label as string}
-                {id === "feed" && <span className="nav-dot" />}
-              </button>
-            ))}
-          </nav>
-          <button className="primary new-post" onClick={() => open("post")}>
-            <Plus size={19} /> חומר חדש
-          </button>
-          <div className="sidebar-bottom">
-            <div className="community-mark">״</div>
-            <p>
-              כל פאנץ׳ גדול התחיל
-              <br />
-              ב״רגע, יש לי רעיון״.
-            </p>
-            <small>מרחב ליצירה, לא לתחרות.</small>
-            {user && (
-              <button className="signout" onClick={() => db?.auth.signOut()}>
-                <LogOut size={16} /> יציאה
-              </button>
-            )}
-          </div>
-        </aside>
-        <main>
+        <main id="main-content" tabIndex={-1}>
           {!db && (
             <div className="demo-note">
               <Sparkles size={16} /> מצב הדגמה · התוכן לדוגמה. הרשמה ושיתוף
@@ -430,7 +522,9 @@ function App() {
                     <h3>{p.name}</h3>
                     <p>{p.bio || "חלק מקהילת מצחיק"}</p>
                     <small>{p.city}</small>
-                    <span>לצפייה בחומרים ←</span>
+                    <span>
+                      לצפייה בחומרים <ArrowLeft size={14} />
+                    </span>
                   </button>
                 ))}
               </div>
@@ -442,7 +536,9 @@ function App() {
             </>
           ) : (
             <>
-              <div className="page-heading">
+              <div
+                className={`page-heading ${view === "feed" && !selected ? "feed-heading" : ""}`}
+              >
                 <div>
                   <div className="eyebrow">
                     {selected
@@ -469,22 +565,7 @@ function App() {
                       : "מקום לנסות רעיונות, לחדד פאנצ׳ים ולפרגן לאנשים שמבינים."}
                   </p>
                 </div>
-                <span className="heading-doodle">✳</span>
               </div>
-              {view === "feed" && !selected && (
-                <button className="composer" onClick={() => open("post")}>
-                  <span className="avatar">
-                    {profile?.name?.[0] || <Mic size={20} />}
-                  </span>
-                  <span>אז... על מה אתם עובדים?</span>
-                  <span className="composer-image">
-                    <ImagePlus size={20} />
-                  </span>
-                  <span className="composer-plus">
-                    <Plus size={20} />
-                  </span>
-                </button>
-              )}
               <div className="feed-controls">
                 <div className="tabs">
                   {kinds.map((k) => (
@@ -492,199 +573,303 @@ function App() {
                       className={filter === k ? "chosen" : ""}
                       onClick={() => setFilter(k)}
                       key={k}
+                      aria-label={k}
+                      aria-pressed={filter === k}
                     >
-                      {k}
+                      {k === "פאנץ׳" ? (
+                        <Mic size={20} />
+                      ) : k === "רעיון" ? (
+                        <Lightbulb size={20} />
+                      ) : k === "חומר" ? (
+                        <ImagePlus size={20} />
+                      ) : null}
+                      {k === "פאנץ׳"
+                        ? "פאנצ׳ים"
+                        : k === "רעיון"
+                          ? "רעיונות"
+                          : k === "חומר"
+                            ? "חומרים"
+                            : "הכול"}
                     </button>
                   ))}
                 </div>
-                <label className="search">
-                  <Search size={17} />
-                  <input
-                    placeholder="חיפוש בחומרים"
-                    aria-label="חיפוש בחומרים"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </label>
+                <button
+                  className="primary toolbar-create"
+                  onClick={() => open("post")}
+                >
+                  <Plus size={19} />
+                  חומר חדש
+                </button>
               </div>
-              <div className="feed-label">
-                <span>
-                  {selected
-                    ? "החומרים"
-                    : view === "saved"
-                      ? "הפוסטים השמורים"
-                      : "מה חדש במחברת"}
-                </span>
-                <span>הכי חדשים קודם</span>
-              </div>
-              {error && !modal && (
-                <div className="error">
-                  {error}
-                  <button
-                    onClick={() => {
-                      setError("");
-                      setLoading(true);
-                      load();
-                    }}
-                  >
-                    נסו שוב
+              <div className="editorial-body">
+                <aside className="writing-rail" aria-label="השראה לכתיבה">
+                  <button className="composer" onClick={() => open("post")}>
+                    <span className="composer-eyebrow">המחברת פתוחה.</span>
+                    <strong>
+                      רעיונות?
+                      <br />
+                      פאנצ׳ים?
+                      <br />
+                      חומרים?
+                      <br />
+                      הכול כאן.
+                    </strong>
+                    <span className="composer-scribble" aria-hidden="true">
+                      <ArrowDownLeft size={58} strokeWidth={3} />
+                    </span>
+                    <span className="composer-action">
+                      <Plus size={19} />
+                      חומר חדש
+                    </span>
                   </button>
-                </div>
-              )}
-              {loading ? (
-                <div className="empty">
-                  <Loader2 className="spin" /> טוענים את החומרים…
-                </div>
-              ) : (
-                shown.map((p) => (
-                  <article className="post" key={p.id}>
-                    <div className="post-top">
+                  <div className="daily-card">
+                    <span className="pill">תרגיל כתיבה / 01</span>
+                    <Lightbulb size={32} strokeWidth={1.4} />
+                    <h2>
+                      היומיום שלכם.
+                      <br />
+                      הטוויסט שלכם.
+                    </h2>
+                    <p>
+                      קחו משהו קטן שעצבן אתכם היום. תנו לו סוף שאף אחד לא ציפה
+                      לו.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setBody("");
+                        setKind("רעיון");
+                        open("post");
+                      }}
+                    >
+                      יש לי כיוון
+                      <ArrowUpLeft size={18} />
+                    </button>
+                  </div>
+                  <div className="rules">
+                    <span className="rules-number">[ ! ]</span>
+                    <h3>מצחיק. אבל עם כבוד.</h3>
+                    <p>
+                      פידבק בונה, קרדיט ליוצרים ופרגון אמיתי. חומר של מישהו אחר?
+                      בקשו רשות לפני שימוש.
+                    </p>
+                  </div>
+                </aside>
+                <div className="feed-content">
+                  <div className="feed-label">
+                    <span>
+                      {selected
+                        ? "החומרים"
+                        : view === "saved"
+                          ? "הפוסטים השמורים"
+                          : "מה חדש במחברת"}
+                    </span>
+                    <span>הכי חדשים קודם</span>
+                  </div>
+                  {error && !modal && (
+                    <div className="error">
+                      {error}
                       <button
-                        className="author"
                         onClick={() => {
-                          setSelected(p.profiles);
-                          setView("feed");
+                          setError("");
+                          setLoading(true);
+                          load();
                         }}
                       >
-                        <span
-                          className={`avatar tone-${p.profiles.name.length % 3}`}
-                        >
-                          {p.profiles.name[0]}
-                        </span>
-                        <span>
-                          <strong>{p.profiles.name}</strong>
-                          <small>
-                            {p.profiles.city && `${p.profiles.city} · `}
-                            {relativeTime(p.created_at)}
-                          </small>
-                        </span>
+                        נסו שוב
                       </button>
-                      <span className={`tag tag-${kinds.indexOf(p.kind)}`}>
-                        {p.kind}
-                      </span>
                     </div>
-                    <p className="post-body">{p.body}</p>
-                    {p.image_url && (
-                      <img
-                        className="post-image"
-                        src={p.image_url}
-                        alt="תמונה שצורפה לחומר"
-                        loading="lazy"
-                      />
-                    )}
-                    <div className="post-actions">
-                      <button
-                        className={
-                          p.reactions.some((r) => r.user_id === user?.id)
-                            ? "liked"
-                            : ""
-                        }
-                        onClick={() => react(p)}
-                      >
-                        <Heart size={18} />
-                        <span>פרגון</span>
-                        {p.reactions.length > 0 && p.reactions.length}
-                      </button>
-                      <button
-                        onClick={() =>
-                          setExpanded(
-                            expanded.includes(p.id)
-                              ? expanded.filter((id) => id !== p.id)
-                              : [...expanded, p.id],
-                          )
-                        }
-                      >
-                        <MessageCircle size={18} />
-                        {p.comments.length} תגובות
-                      </button>
-                      <div className="action-spacer" />
-                      <button
-                        className={
-                          saved.includes(p.id) ? "bookmarked icon" : "icon"
-                        }
-                        aria-label="שמירה להמשך"
-                        onClick={() =>
-                          setSaved(
-                            saved.includes(p.id)
-                              ? saved.filter((id) => id !== p.id)
-                              : [...saved, p.id],
-                          )
-                        }
-                      >
-                        <Bookmark size={18} />
-                      </button>
-                      {p.user_id === user?.id ? (
-                        <button
-                          className="icon"
-                          aria-label="מחיקת פוסט"
-                          onClick={() => remove(p)}
-                        >
-                          <Trash2 size={17} />
-                        </button>
-                      ) : (
-                        <button
-                          className="icon"
-                          aria-label="דיווח על פוסט"
-                          onClick={() => report(p)}
-                        >
-                          <Flag size={16} />
-                        </button>
-                      )}
-                    </div>
-                    {expanded.includes(p.id) && (
-                      <div className="comments">
-                        {p.comments.map((c) => (
-                          <div className="comment" key={c.id}>
-                            <span className="avatar tiny">
-                              {c.profiles.name[0]}
-                            </span>
-                            <div>
-                              <strong>{c.profiles.name}</strong>
-                              <p>{c.body}</p>
-                            </div>
-                          </div>
-                        ))}
-                        {!p.comments.length && (
-                          <small>עוד אין תגובות. יש לכם כיוון לפאנץ׳?</small>
-                        )}
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            addComment(p);
-                          }}
-                        >
-                          <input
-                            aria-label="כתיבת תגובה"
-                            placeholder="פרגון, זווית חדשה או פידבק בונה…"
-                            maxLength={2000}
-                            value={comment[p.id] || ""}
-                            onChange={(e) =>
-                              setComment({ ...comment, [p.id]: e.target.value })
-                            }
-                          />
-                          <button disabled={saving} className="primary">
-                            שליחה
-                          </button>
-                        </form>
+                  )}
+                  <div className="feed-grid">
+                    {loading ? (
+                      <div className="empty">
+                        <Loader2 className="spin" /> טוענים את החומרים…
                       </div>
+                    ) : (
+                      shown.map((p, index) => (
+                        <article
+                          className={`post ${p.image_url ? "image-post" : "text-post"} ${index === 0 ? "lead-post" : ""}`}
+                          key={p.id}
+                        >
+                          <div className="post-top">
+                            <button
+                              className="author"
+                              onClick={() => {
+                                setSelected(p.profiles);
+                                setView("feed");
+                              }}
+                            >
+                              <span
+                                className={`avatar tone-${p.profiles.name.length % 3}`}
+                              >
+                                {p.profiles.name[0]}
+                              </span>
+                              <span>
+                                <strong>{p.profiles.name}</strong>
+                                <small>
+                                  {p.profiles.city && `${p.profiles.city} · `}
+                                  {relativeTime(p.created_at)}
+                                </small>
+                              </span>
+                            </button>
+                            <span
+                              className={`tag tag-${kinds.indexOf(p.kind)}`}
+                            >
+                              {p.kind}
+                            </span>
+                          </div>
+                          {p.image_url && (
+                            <figure className="post-figure">
+                              <img
+                                className="post-image"
+                                src={p.image_url}
+                                alt="תמונה שצורפה לחומר"
+                                loading="lazy"
+                              />
+                              {!db && (
+                                <figcaption>
+                                  חומר לדוגמה · מאחורי הקלעים
+                                </figcaption>
+                              )}
+                            </figure>
+                          )}
+                          <div className="post-copy">
+                            <p className="post-body">
+                              {p.body.split("\n\n")[0]}
+                            </p>
+                            {p.body.includes("\n\n") && (
+                              <p className="post-note">
+                                {p.body.split("\n\n").slice(1).join("\n\n")}
+                              </p>
+                            )}
+                          </div>
+                          <div className="post-actions">
+                            <button
+                              className={
+                                p.reactions.some((r) => r.user_id === user?.id)
+                                  ? "liked"
+                                  : ""
+                              }
+                              aria-pressed={p.reactions.some(
+                                (r) => r.user_id === user?.id,
+                              )}
+                              onClick={() => react(p)}
+                            >
+                              <Heart size={18} />
+                              <span>פרגון</span>
+                              {p.reactions.length > 0 && p.reactions.length}
+                            </button>
+                            <button
+                              aria-expanded={expanded.includes(p.id)}
+                              onClick={() =>
+                                setExpanded(
+                                  expanded.includes(p.id)
+                                    ? expanded.filter((id) => id !== p.id)
+                                    : [...expanded, p.id],
+                                )
+                              }
+                            >
+                              <MessageCircle size={18} />
+                              {p.comments.length} תגובות
+                            </button>
+                            <div className="action-spacer" />
+                            <button
+                              className={
+                                saved.includes(p.id)
+                                  ? "bookmarked icon"
+                                  : "icon"
+                              }
+                              aria-label="שמירה להמשך"
+                              aria-pressed={saved.includes(p.id)}
+                              onClick={() =>
+                                setSaved(
+                                  saved.includes(p.id)
+                                    ? saved.filter((id) => id !== p.id)
+                                    : [...saved, p.id],
+                                )
+                              }
+                            >
+                              <Bookmark size={18} />
+                            </button>
+                            {p.user_id === user?.id ? (
+                              <button
+                                className="icon"
+                                aria-label="מחיקת פוסט"
+                                onClick={() => remove(p)}
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            ) : (
+                              <button
+                                className="icon"
+                                aria-label="דיווח על פוסט"
+                                onClick={() => report(p)}
+                              >
+                                <Flag size={16} />
+                              </button>
+                            )}
+                          </div>
+                          {expanded.includes(p.id) && (
+                            <div className="comments">
+                              {p.comments.map((c) => (
+                                <div className="comment" key={c.id}>
+                                  <span className="avatar tiny">
+                                    {c.profiles.name[0]}
+                                  </span>
+                                  <div>
+                                    <strong>{c.profiles.name}</strong>
+                                    <p>{c.body}</p>
+                                  </div>
+                                </div>
+                              ))}
+                              {!p.comments.length && (
+                                <small>
+                                  עוד אין תגובות. יש לכם כיוון לפאנץ׳?
+                                </small>
+                              )}
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  addComment(p);
+                                }}
+                              >
+                                <input
+                                  aria-label="כתיבת תגובה"
+                                  placeholder="פרגון, זווית חדשה או פידבק בונה…"
+                                  maxLength={2000}
+                                  value={comment[p.id] || ""}
+                                  onChange={(e) =>
+                                    setComment({
+                                      ...comment,
+                                      [p.id]: e.target.value,
+                                    })
+                                  }
+                                />
+                                <button disabled={saving} className="primary">
+                                  שליחה
+                                </button>
+                              </form>
+                            </div>
+                          )}
+                        </article>
+                      ))
                     )}
-                  </article>
-                ))
-              )}
-              {!loading && !shown.length && (
-                <div className="empty">
-                  <Mic size={30} />
-                  <h3>עוד אין כאן חומר</h3>
-                  <p>
-                    {view === "mine" && !user
-                      ? "היכנסו כדי לראות את החומרים שלכם."
-                      : "נסו חיפוש אחר, או שתפו את הרעיון הראשון."}
-                  </p>
-                  <button className="primary" onClick={() => open("post")}>
-                    בואו נכתוב משהו
-                  </button>
+                  </div>
+                  {!loading && !shown.length && (
+                    <div className="empty">
+                      <Mic size={30} />
+                      <h3>עוד אין כאן חומר</h3>
+                      <p>
+                        {view === "mine" && !user
+                          ? "היכנסו כדי לראות את החומרים שלכם."
+                          : "נסו חיפוש אחר, או שתפו את הרעיון הראשון."}
+                      </p>
+                      <button className="primary" onClick={() => open("post")}>
+                        בואו נכתוב משהו
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </>
           )}
           <footer>
@@ -692,35 +877,21 @@ function App() {
             ליוצרים.
           </footer>
         </main>
-        <aside className="right-rail">
-          <div className="daily-card">
-            <span className="pill">תרגיל כתיבה</span>
-            <div className="daily-star">✳</div>
-            <h2>
-              לקחת את היומיום.
-              <br />
-              להפוך אותו לפאנץ׳.
-            </h2>
-            <p>
-              כתבו על משהו קטן שעצבן אתכם היום. עכשיו תנו לו סוף שאף אחד לא ציפה
-              לו.
-            </p>
+        <aside className="creator-directory" aria-label="יוצרים בקהילה">
+          <div className="directory-heading">
+            <h2>יוצרים במצחיק</h2>
             <button
+              aria-label="הצגת כל היוצרים"
               onClick={() => {
-                setBody("");
-                setKind("רעיון");
-                open("post");
+                setView("people");
+                setSelected(null);
               }}
             >
-              יש לי כיוון <ArrowUpLeft size={18} />
+              <ArrowLeft size={18} />
             </button>
           </div>
-          <div className="rail-section">
-            <div className="rail-title">
-              <h3>באותו מיקרופון</h3>
-              <Users size={17} />
-            </div>
-            {people.slice(0, 3).map((p) => (
+          <div className="directory-list">
+            {people.map((p, index) => (
               <button
                 className="rail-person"
                 key={p.id}
@@ -729,21 +900,39 @@ function App() {
                   setView("feed");
                 }}
               >
-                <span className="avatar">{p.name[0]}</span>
+                <span className={`avatar tone-${index % 3}`}>{p.name[0]}</span>
                 <span>
                   <strong>{p.name}</strong>
-                  <small>{p.city || "בקהילה"}</small>
+                  <small>{p.bio || p.city || "כותבים ביחד"}</small>
+                  <span className="creator-link">
+                    לחומרים <ArrowUpLeft size={11} />
+                  </span>
                 </span>
-                <ArrowUpLeft size={15} />
               </button>
             ))}
           </div>
-          <div className="rules">
-            <span>✦</span>
-            <h3>פה נותנים מקום לחומר.</h3>
+          {!people.length && (
+            <p className="directory-empty">
+              הבמה פתוחה. הקהילה מחכה לקול שלכם.
+            </p>
+          )}
+          <div className="blue-poster">
+            <ArrowUpLeft size={54} strokeWidth={2.5} />
+            <strong>
+              יחד,
+              <br />
+              זה מצחיק
+              <br />
+              יותר.
+            </strong>
+            <span>פחות אגו. יותר חומר.</span>
+          </div>
+          <div className="directory-footnote">
+            <Crown size={24} />
             <p>
-              פידבק בונה, קרדיט ליוצרים ופרגון אמיתי. רעיון שמישהו שיתף שייך לו
-              — בקשו רשות לפני שימוש.
+              כל פאנץ׳ גדול התחיל
+              <br />
+              ב״רגע, יש לי רעיון״.
             </p>
           </div>
         </aside>

@@ -53,3 +53,48 @@ test("demo never pretends to register or publish; responsive layout fits mobile"
     page.getByRole("heading", { name: "שמרתי להמשך." }),
   ).toBeVisible();
 });
+
+test("editorial layout preserves usable controls and images at phone, tablet and desktop widths", async ({
+  page,
+}) => {
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator("article")).toHaveCount(3);
+    await expect(page.locator(".post-image")).toBeVisible();
+    await expect
+      .poll(() =>
+        page
+          .locator(".post-image")
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      `overflow at ${width}px`,
+    ).toBe(true);
+    await page
+      .getByRole("textbox", { name: "חיפוש בחומרים" })
+      .fill("מילה שלא קיימת בפיד");
+    await expect(
+      page.getByRole("heading", { name: "עוד אין כאן חומר" }),
+    ).toBeVisible();
+    await page.getByRole("textbox", { name: "חיפוש בחומרים" }).fill("");
+    await page.locator(".toolbar-create").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const bounds = await dialog.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    await page
+      .getByLabel("אימייל", { exact: true })
+      .fill("comedian@example.com");
+    await page.getByRole("button", { name: "כבר יש חשבון? כניסה" }).click();
+    await expect(page.getByLabel("שם במה", { exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  }
+});

@@ -27,7 +27,7 @@ export const demo: Post[] = [
     id: "demo-1",
     user_id: "a",
     kind: "פאנץ׳",
-    body: "הפסיכולוג שלי אמר שאני צריך ללמוד לשחרר.\nאז שחררתי אותו. חסכתי 400 שקל בשבוע.\n\nמרגיש לי שחסר עוד ביט בסוף. מה אתם אומרים?",
+    body: "הפסיכולוג אמר לי לשחרר.\nאז שחררתי אותו.\n\nחסכתי 400 שקל בשבוע. מרגיש לי שחסר עוד ביט בסוף. מה אתם אומרים?",
     image_url: null,
     created_at: new Date().toISOString(),
     profiles: {
@@ -50,7 +50,7 @@ export const demo: Post[] = [
     id: "demo-2",
     user_id: "b",
     kind: "רעיון",
-    body: "רעיון לקטע: קבוצות וואטסאפ של הבניין הן בעצם ריאליטי בלי תקציב.\nיש נבל, יש בריתות, ובסוף תמיד מישהו עוזב בטריקת דלת.\n\nמי עוד מרגיש שהוועד שלו צריך סוכן?",
+    body: "קבוצת הוואטסאפ של הבניין היא ריאליטי בלי תקציב.\n\nיש נבל, יש בריתות, ובסוף תמיד מישהו עוזב בטריקת דלת. מי עוד מרגיש שהוועד שלו צריך סוכן?",
     image_url: null,
     created_at: new Date(Date.now() - 3600000).toISOString(),
     profiles: {
@@ -66,9 +66,9 @@ export const demo: Post[] = [
     id: "demo-3",
     user_id: "c",
     kind: "חומר",
-    body: "תזכורת לעצמי לפני במה פתוחה:\n1. לנשום.\n2. לא להתנצל על הבדיחה.\n3. אם אף אחד לא צוחק — לפחות התאורה טובה.\n\nשתפו טיפ אחד שעזר לכם בהופעה הראשונה 👇",
-    image_url: null,
-    created_at: new Date(Date.now() - 7200000).toISOString(),
+    body: "הבמה ריקה. הראש מלא.\n\nתזכורת לעצמי לפני במה פתוחה:\n1. לנשום.\n2. לא להתנצל על הבדיחה.\n3. אם אף אחד לא צוחק — לפחות התאורה טובה.\n\nשתפו טיפ אחד שעזר לכם בהופעה הראשונה 👇",
+    image_url: "/images/stage.png",
+    created_at: new Date(Date.now() - 1800000).toISOString(),
     profiles: {
       id: "c",
       name: "איתי ברק",
@@ -78,7 +78,9 @@ export const demo: Post[] = [
     comments: [],
     reactions: [],
   },
-];
+].sort(
+  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+);
 export function relativeTime(date: string) {
   const minutes = Math.max(
     0,
