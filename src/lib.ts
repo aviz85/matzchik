@@ -27,7 +27,7 @@ export const demo: Post[] = [
     id: "demo-1",
     user_id: "a",
     kind: "פאנץ׳",
-    body: "הפסיכולוג אמר לי לשחרר.\nאז שחררתי אותו.\n\nחסכתי 400 שקל בשבוע. מרגיש לי שחסר עוד ביט בסוף. מה אתם אומרים?",
+    body: "הפסיכולוג אמר לי\nלשחרר.\nאז שחררתי אותו.\n\nחסכתי 400 שקל בשבוע. מרגיש לי שחסר עוד ביט בסוף. מה אתם אומרים?",
     image_url: null,
     created_at: new Date().toISOString(),
     profiles: {
@@ -67,7 +67,7 @@ export const demo: Post[] = [
     user_id: "c",
     kind: "חומר",
     body: "הבמה ריקה. הראש מלא.\n\nתזכורת לעצמי לפני במה פתוחה:\n1. לנשום.\n2. לא להתנצל על הבדיחה.\n3. אם אף אחד לא צוחק — לפחות התאורה טובה.\n\nשתפו טיפ אחד שעזר לכם בהופעה הראשונה 👇",
-    image_url: "/images/stage.png",
+    image_url: "/images/stage.webp",
     created_at: new Date(Date.now() - 1800000).toISOString(),
     profiles: {
       id: "c",

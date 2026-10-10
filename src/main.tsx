@@ -347,6 +347,198 @@ function App() {
   const people = Array.from(
     new Map(posts.map((p) => [p.profiles.id, p.profiles])).values(),
   );
+  const portrait = (id: string): React.CSSProperties | undefined =>
+    !db && ["a", "b", "c"].includes(id)
+      ? {
+          backgroundImage: "url(/images/creators.webp)",
+          backgroundSize: "300% auto",
+          backgroundPosition: `${({ a: "0%", b: "50%", c: "100%" } as Record<string, string>)[id]} 40%`,
+          color: "transparent",
+        }
+      : undefined;
+  const frontPage =
+    view === "feed" && !selected && filter === "הכול" && !search;
+  const railStory = frontPage
+    ? shown.find((p, index) => index > 1 && !p.image_url)
+    : undefined;
+  const mainStories = shown.filter((p) => p.id !== railStory?.id);
+  const renderPost = (p: Post, index: number, compact = false) => (
+    <article
+      className={`post ${p.image_url ? "image-post" : "text-post"} ${index === 0 && !compact ? "lead-post" : ""} ${compact ? "rail-post" : ""}`}
+      key={p.id}
+    >
+      <div className="post-top">
+        <button
+          className="author"
+          onClick={() => {
+            setSelected(p.profiles);
+            setView("feed");
+          }}
+        >
+          <span
+            className={`avatar tone-${p.profiles.name.length % 3}`}
+            style={portrait(p.profiles.id)}
+          >
+            {p.profiles.name[0]}
+          </span>
+          <span>
+            <strong>{p.profiles.name}</strong>
+            <small>
+              {p.profiles.city && `${p.profiles.city} · `}
+              {relativeTime(p.created_at)}
+            </small>
+          </span>
+        </button>
+        <span className={`tag tag-${kinds.indexOf(p.kind)}`}>{p.kind}</span>
+      </div>
+      {p.image_url && (
+        <figure className="post-figure">
+          <img
+            className="post-image"
+            src={p.image_url}
+            alt="תמונה שצורפה לחומר"
+            loading="lazy"
+          />
+          {!db && <figcaption>חומר לדוגמה · מאחורי הקלעים</figcaption>}
+        </figure>
+      )}
+      <div className="post-copy">
+        <p className="post-body">{p.body.split("\n\n")[0]}</p>
+        {p.body.includes("\n\n") && (
+          <p className="post-note">
+            {p.body.split("\n\n").slice(1).join("\n\n")}
+          </p>
+        )}
+      </div>
+      <div className="post-actions">
+        <button
+          className={
+            p.reactions.some((r) => r.user_id === user?.id) ? "liked" : ""
+          }
+          aria-pressed={p.reactions.some((r) => r.user_id === user?.id)}
+          onClick={() => react(p)}
+        >
+          <Heart size={18} />
+          <span>פרגון</span>
+          {p.reactions.length > 0 && p.reactions.length}
+        </button>
+        <button
+          aria-expanded={expanded.includes(p.id)}
+          onClick={() =>
+            setExpanded(
+              expanded.includes(p.id)
+                ? expanded.filter((id) => id !== p.id)
+                : [...expanded, p.id],
+            )
+          }
+        >
+          <MessageCircle size={18} />
+          {p.comments.length} תגובות
+        </button>
+        <div className="action-spacer" />
+        <button
+          className={saved.includes(p.id) ? "bookmarked icon" : "icon"}
+          aria-label="שמירה להמשך"
+          aria-pressed={saved.includes(p.id)}
+          onClick={() =>
+            setSaved(
+              saved.includes(p.id)
+                ? saved.filter((id) => id !== p.id)
+                : [...saved, p.id],
+            )
+          }
+        >
+          <Bookmark size={18} />
+        </button>
+        {p.user_id === user?.id ? (
+          <button
+            className="icon"
+            aria-label="מחיקת פוסט"
+            onClick={() => remove(p)}
+          >
+            <Trash2 size={17} />
+          </button>
+        ) : (
+          <button
+            className="icon"
+            aria-label="דיווח על פוסט"
+            onClick={() => report(p)}
+          >
+            <Flag size={16} />
+          </button>
+        )}
+      </div>
+      {!expanded.includes(p.id) && (
+        <div className="comment-preview">
+          {p.comments.length > 0 && (
+            <>
+              <h3>תגובות</h3>
+              <div className="comment">
+                <span
+                  className="avatar tiny"
+                  style={portrait(p.comments[0].profiles.id)}
+                >
+                  {p.comments[0].profiles.name[0]}
+                </span>
+                <div>
+                  <strong>{p.comments[0].profiles.name}</strong>
+                  <p>{p.comments[0].body}</p>
+                </div>
+              </div>
+            </>
+          )}
+          <button
+            className="comment-invitation"
+            onClick={() => setExpanded([...expanded, p.id])}
+          >
+            <MessageCircle size={16} />
+            <span>כתיבת תגובה…</span>
+            <ArrowUpLeft size={16} />
+          </button>
+        </div>
+      )}
+      {expanded.includes(p.id) && (
+        <div className="comments">
+          {p.comments.map((c) => (
+            <div className="comment" key={c.id}>
+              <span className="avatar tiny" style={portrait(c.profiles.id)}>
+                {c.profiles.name[0]}
+              </span>
+              <div>
+                <strong>{c.profiles.name}</strong>
+                <p>{c.body}</p>
+              </div>
+            </div>
+          ))}
+          {!p.comments.length && (
+            <small>עוד אין תגובות. יש לכם כיוון לפאנץ׳?</small>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              addComment(p);
+            }}
+          >
+            <input
+              aria-label="כתיבת תגובה"
+              placeholder="פרגון, זווית חדשה או פידבק בונה…"
+              maxLength={2000}
+              value={comment[p.id] || ""}
+              onChange={(e) =>
+                setComment({
+                  ...comment,
+                  [p.id]: e.target.value,
+                })
+              }
+            />
+            <button disabled={saving} className="primary">
+              שליחה
+            </button>
+          </form>
+        </div>
+      )}
+    </article>
+  );
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -373,7 +565,7 @@ function App() {
             setMenu(false);
           }}
         >
-          מצחיק<span>®</span>
+          מצחיק
         </a>
         <nav
           id="site-nav"
@@ -436,11 +628,11 @@ function App() {
       </header>
       <section className="masthead" aria-label="מצחיק — קהילת הסטנדאפ">
         <div className="masthead-art" aria-hidden="true">
-          <img src="/images/stage.png" alt="" />
+          <img src="/images/microphone-cutout.webp" alt="" />
           <span className="art-caption">
             יותר קולות.
             <br />
-            פחות פילטרים.
+            יותר מצחיק.
           </span>
           <svg className="scribble" viewBox="0 0 120 65">
             <path d="M8 42 27 12 31 48 60 8 62 50 88 20 108 44" />
@@ -448,6 +640,7 @@ function App() {
         </div>
         <a
           className="masthead-word"
+          aria-label="מצחיק"
           href="#"
           onClick={(e) => {
             e.preventDefault();
@@ -455,7 +648,39 @@ function App() {
             setSelected(null);
           }}
         >
-          מצחיק
+          <svg
+            viewBox="0 0 1100 255"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <filter id="printed-ink">
+                <feTurbulence
+                  type="fractalNoise"
+                  baseFrequency="0.65"
+                  numOctaves="2"
+                  result="noise"
+                />
+                <feDisplacementMap
+                  in="SourceGraphic"
+                  in2="noise"
+                  scale="2.2"
+                  xChannelSelector="R"
+                  yChannelSelector="G"
+                />
+              </filter>
+            </defs>
+            <text
+              x="550"
+              y="188"
+              textAnchor="middle"
+              textLength="1080"
+              lengthAdjust="spacingAndGlyphs"
+              filter="url(#printed-ink)"
+            >
+              מצחיק
+            </text>
+          </svg>
         </a>
         <div className="masthead-manifesto">
           <span className="tape-label">
@@ -475,19 +700,52 @@ function App() {
           <span className="issue-number">בלי פילטר / גרסת בטא</span>
         </div>
       </section>
-      <div className="editorial-kicker">
-        <span>חומר טוב לא נכתב לבד.</span>
-        <span>כותבים. משתפים. מחדדים. מפרגנים.</span>
-        <span className="kicker-arrow" aria-hidden="true">
-          <ArrowDownLeft size={23} />
-        </span>
-      </div>
-      <div className="layout">
+      {view !== "people" && (
+        <div className="feed-controls">
+          <div className="tabs">
+            {kinds.map((k) => (
+              <button
+                className={filter === k ? "chosen" : ""}
+                onClick={() => {
+                  setFilter(k);
+                  setView("feed");
+                }}
+                key={k}
+                aria-label={k}
+                aria-pressed={filter === k}
+              >
+                {k === "פאנץ׳" ? (
+                  <Mic size={20} />
+                ) : k === "רעיון" ? (
+                  <Lightbulb size={20} />
+                ) : k === "חומר" ? (
+                  <ImagePlus size={20} />
+                ) : null}
+                {k === "פאנץ׳"
+                  ? "פאנצ׳ים"
+                  : k === "רעיון"
+                    ? "רעיונות"
+                    : k === "חומר"
+                      ? "חומרים"
+                      : "הכול"}
+              </button>
+            ))}
+          </div>
+          <button
+            className="primary toolbar-create"
+            onClick={() => open("post")}
+          >
+            <Plus size={19} />
+            חומר חדש
+          </button>
+        </div>
+      )}
+      <div className={`layout ${frontPage ? "front-page" : ""}`}>
         <main id="main-content" tabIndex={-1}>
           {!db && (
             <div className="demo-note">
               <Sparkles size={16} /> מצב הדגמה · התוכן לדוגמה. הרשמה ושיתוף
-              ייפתחו לאחר חיבור Supabase.
+              עדיין לא זמינים.
             </div>
           )}
           {db && !user && (
@@ -518,7 +776,9 @@ function App() {
                       setView("feed");
                     }}
                   >
-                    <span className="avatar large">{p.name[0]}</span>
+                    <span className="avatar large" style={portrait(p.id)}>
+                      {p.name[0]}
+                    </span>
                     <h3>{p.name}</h3>
                     <p>{p.bio || "חלק מקהילת מצחיק"}</p>
                     <small>{p.city}</small>
@@ -566,44 +826,14 @@ function App() {
                   </p>
                 </div>
               </div>
-              <div className="feed-controls">
-                <div className="tabs">
-                  {kinds.map((k) => (
-                    <button
-                      className={filter === k ? "chosen" : ""}
-                      onClick={() => setFilter(k)}
-                      key={k}
-                      aria-label={k}
-                      aria-pressed={filter === k}
-                    >
-                      {k === "פאנץ׳" ? (
-                        <Mic size={20} />
-                      ) : k === "רעיון" ? (
-                        <Lightbulb size={20} />
-                      ) : k === "חומר" ? (
-                        <ImagePlus size={20} />
-                      ) : null}
-                      {k === "פאנץ׳"
-                        ? "פאנצ׳ים"
-                        : k === "רעיון"
-                          ? "רעיונות"
-                          : k === "חומר"
-                            ? "חומרים"
-                            : "הכול"}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="primary toolbar-create"
-                  onClick={() => open("post")}
-                >
-                  <Plus size={19} />
-                  חומר חדש
-                </button>
-              </div>
               <div className="editorial-body">
                 <aside className="writing-rail" aria-label="השראה לכתיבה">
                   <button className="composer" onClick={() => open("post")}>
+                    <img
+                      className="composer-notebook"
+                      src="/images/notebook.webp"
+                      alt=""
+                    />
                     <span className="composer-eyebrow">המחברת פתוחה.</span>
                     <strong>
                       רעיונות?
@@ -622,6 +852,7 @@ function App() {
                       חומר חדש
                     </span>
                   </button>
+                  {railStory && renderPost(railStory, 2, true)}
                   <div className="daily-card">
                     <span className="pill">תרגיל כתיבה / 01</span>
                     <Lightbulb size={32} strokeWidth={1.4} />
@@ -679,179 +910,15 @@ function App() {
                       </button>
                     </div>
                   )}
-                  <div className="feed-grid">
+                  <div
+                    className={`feed-grid ${mainStories.length === 1 ? "single-story" : ""}`}
+                  >
                     {loading ? (
                       <div className="empty">
                         <Loader2 className="spin" /> טוענים את החומרים…
                       </div>
                     ) : (
-                      shown.map((p, index) => (
-                        <article
-                          className={`post ${p.image_url ? "image-post" : "text-post"} ${index === 0 ? "lead-post" : ""}`}
-                          key={p.id}
-                        >
-                          <div className="post-top">
-                            <button
-                              className="author"
-                              onClick={() => {
-                                setSelected(p.profiles);
-                                setView("feed");
-                              }}
-                            >
-                              <span
-                                className={`avatar tone-${p.profiles.name.length % 3}`}
-                              >
-                                {p.profiles.name[0]}
-                              </span>
-                              <span>
-                                <strong>{p.profiles.name}</strong>
-                                <small>
-                                  {p.profiles.city && `${p.profiles.city} · `}
-                                  {relativeTime(p.created_at)}
-                                </small>
-                              </span>
-                            </button>
-                            <span
-                              className={`tag tag-${kinds.indexOf(p.kind)}`}
-                            >
-                              {p.kind}
-                            </span>
-                          </div>
-                          {p.image_url && (
-                            <figure className="post-figure">
-                              <img
-                                className="post-image"
-                                src={p.image_url}
-                                alt="תמונה שצורפה לחומר"
-                                loading="lazy"
-                              />
-                              {!db && (
-                                <figcaption>
-                                  חומר לדוגמה · מאחורי הקלעים
-                                </figcaption>
-                              )}
-                            </figure>
-                          )}
-                          <div className="post-copy">
-                            <p className="post-body">
-                              {p.body.split("\n\n")[0]}
-                            </p>
-                            {p.body.includes("\n\n") && (
-                              <p className="post-note">
-                                {p.body.split("\n\n").slice(1).join("\n\n")}
-                              </p>
-                            )}
-                          </div>
-                          <div className="post-actions">
-                            <button
-                              className={
-                                p.reactions.some((r) => r.user_id === user?.id)
-                                  ? "liked"
-                                  : ""
-                              }
-                              aria-pressed={p.reactions.some(
-                                (r) => r.user_id === user?.id,
-                              )}
-                              onClick={() => react(p)}
-                            >
-                              <Heart size={18} />
-                              <span>פרגון</span>
-                              {p.reactions.length > 0 && p.reactions.length}
-                            </button>
-                            <button
-                              aria-expanded={expanded.includes(p.id)}
-                              onClick={() =>
-                                setExpanded(
-                                  expanded.includes(p.id)
-                                    ? expanded.filter((id) => id !== p.id)
-                                    : [...expanded, p.id],
-                                )
-                              }
-                            >
-                              <MessageCircle size={18} />
-                              {p.comments.length} תגובות
-                            </button>
-                            <div className="action-spacer" />
-                            <button
-                              className={
-                                saved.includes(p.id)
-                                  ? "bookmarked icon"
-                                  : "icon"
-                              }
-                              aria-label="שמירה להמשך"
-                              aria-pressed={saved.includes(p.id)}
-                              onClick={() =>
-                                setSaved(
-                                  saved.includes(p.id)
-                                    ? saved.filter((id) => id !== p.id)
-                                    : [...saved, p.id],
-                                )
-                              }
-                            >
-                              <Bookmark size={18} />
-                            </button>
-                            {p.user_id === user?.id ? (
-                              <button
-                                className="icon"
-                                aria-label="מחיקת פוסט"
-                                onClick={() => remove(p)}
-                              >
-                                <Trash2 size={17} />
-                              </button>
-                            ) : (
-                              <button
-                                className="icon"
-                                aria-label="דיווח על פוסט"
-                                onClick={() => report(p)}
-                              >
-                                <Flag size={16} />
-                              </button>
-                            )}
-                          </div>
-                          {expanded.includes(p.id) && (
-                            <div className="comments">
-                              {p.comments.map((c) => (
-                                <div className="comment" key={c.id}>
-                                  <span className="avatar tiny">
-                                    {c.profiles.name[0]}
-                                  </span>
-                                  <div>
-                                    <strong>{c.profiles.name}</strong>
-                                    <p>{c.body}</p>
-                                  </div>
-                                </div>
-                              ))}
-                              {!p.comments.length && (
-                                <small>
-                                  עוד אין תגובות. יש לכם כיוון לפאנץ׳?
-                                </small>
-                              )}
-                              <form
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  addComment(p);
-                                }}
-                              >
-                                <input
-                                  aria-label="כתיבת תגובה"
-                                  placeholder="פרגון, זווית חדשה או פידבק בונה…"
-                                  maxLength={2000}
-                                  value={comment[p.id] || ""}
-                                  onChange={(e) =>
-                                    setComment({
-                                      ...comment,
-                                      [p.id]: e.target.value,
-                                    })
-                                  }
-                                />
-                                <button disabled={saving} className="primary">
-                                  שליחה
-                                </button>
-                              </form>
-                            </div>
-                          )}
-                        </article>
-                      ))
+                      mainStories.map((p, index) => renderPost(p, index))
                     )}
                   </div>
                   {!loading && !shown.length && (
@@ -900,7 +967,12 @@ function App() {
                   setView("feed");
                 }}
               >
-                <span className={`avatar tone-${index % 3}`}>{p.name[0]}</span>
+                <span
+                  className={`avatar tone-${index % 3}`}
+                  style={portrait(p.id)}
+                >
+                  {p.name[0]}
+                </span>
                 <span>
                   <strong>{p.name}</strong>
                   <small>{p.bio || p.city || "כותבים ביחד"}</small>

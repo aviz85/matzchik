@@ -98,3 +98,38 @@ test("editorial layout preserves usable controls and images at phone, tablet and
     await expect(dialog).toHaveCount(0);
   }
 });
+
+// The chosen concept puts content in the first screen; guard the density regression.
+test("desktop edition shows the complete masthead, a punchline, image and comment preview above the fold", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1536, height: 1024 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const position = await page.locator(".feed-grid").boundingBox();
+  expect(position!.y).toBeLessThan(400);
+  const logo = page.locator(".masthead-word");
+  await expect(logo).toBeVisible();
+  const masthead = await page.locator(".masthead").boundingBox(),
+    word = await logo.boundingBox();
+  expect(word!.y).toBeGreaterThanOrEqual(masthead!.y);
+  expect(word!.y + word!.height).toBeLessThanOrEqual(
+    masthead!.y + masthead!.height,
+  );
+  const lead = page.locator(".lead-post"),
+    image = page.locator(".image-post"),
+    idea = page.locator(".rail-post");
+  expect((await lead.boundingBox())!.x).toBeLessThan(
+    (await image.boundingBox())!.x,
+  );
+  expect((await image.boundingBox())!.x).toBeLessThan(
+    (await idea.boundingBox())!.x,
+  );
+  const preview = lead.locator(".comment-preview");
+  await expect(preview).toBeVisible();
+  expect((await preview.boundingBox())!.y).toBeLessThan(1024);
+  await preview.getByRole("button", { name: "כתיבת תגובה…" }).click();
+  await expect(
+    lead.getByRole("textbox", { name: "כתיבת תגובה" }),
+  ).toBeVisible();
+});

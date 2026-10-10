@@ -6,7 +6,7 @@ Hebrew, RTL social workspace for stand-up comedians. React + TypeScript + Vite, 
 
 The implemented visual direction is proposal 2: a bold independent comedy magazine. An oversized Hebrew masthead, warm paper texture, black editorial rules, acid-yellow labels and electric-blue actions replace the earlier card dashboard. Desktop uses staggered story columns, a writing rail and a creator index; phones show a readable single-column edition with a collapsible menu. Auth, composer and profile dialogs follow the same visual system and support Escape/focus containment.
 
-Heebo is bundled locally through `@fontsource-variable/heebo`; the UI no longer requests fonts from Google. `public/images/stage.png` is an AI-generated empty-stage illustration used in the masthead and explicitly labeled demo material. It is not a photograph of a real user's performance. Uploaded user images retain their colors and proportions.
+Heebo is bundled locally through `@fontsource-variable/heebo`; the UI no longer requests fonts from Google. `public/images/stage.webp` is an AI-generated empty-stage illustration used in the masthead and explicitly labeled demo material. It is not a photograph of a real user's performance. The microphone, notebook and fictional demo portraits are also generated assets, encoded as WebP for delivery. Real authenticated profiles continue to use initials when no portrait is supplied. Uploaded user images retain their colors and proportions.
 
 ## Current status
 
@@ -49,3 +49,7 @@ This is an initial MVP, not a fully operated public service. Before opening broa
 ## Deployment
 
 Vercel project: `matzchik`; production alias: https://matzchik.vercel.app . `vercel.json` sets build/SPA routing/security headers. Deploy via Vercel or its CLI using supported authentication. Never put the deployment token in source files or frontend build variables. The initial deployment was uploaded through Vercel's authenticated API, without modifying any existing project.
+
+## Screenshot review
+
+The selected 1536×1024 concept was compared with a screenshot of the deployed site. The correction reduced the desktop feed start from 633px to 368px, restored the complete masthead, moved the leading punchline to the left of the image story, and placed a compact idea beneath the yellow writing panel. Existing comments now have a preview and open into the original full comment form. The main categories run across the page and the illustration assets follow the original art direction. A browser regression check guards the masthead bounds, column ordering and above-fold discussion visibility.
